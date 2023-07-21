@@ -1,0 +1,11 @@
+{
+  "settings": {
+    "token": "",
+    "bot": "chinchilla"
+  },
+  "replace":{
+    "assistant": "A",
+    "user": "U",
+    "system": "S"
+  }
+}
