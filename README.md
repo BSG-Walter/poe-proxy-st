@@ -3,7 +3,7 @@ Python
 
 # Instalacion:
 ejecutar instalar.bat para instalar las dependencias
-o bajarse el zip con todos los archivos listos
+o bajarse el zip con todos los archivos listos (https://github.com/BSG-Walter/poe-proxy-st/releases/tag/0.1)
 
 # Configuracion:
 abre el archivo config.json y pon tu p-b token en el valor "token"
