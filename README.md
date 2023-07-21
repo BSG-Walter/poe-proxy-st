@@ -2,13 +2,8 @@
 Python
 
 # Instalacion:
-pip install flask
-
-pip install poe-api
-
-pip install websockets
-
-(o simplemente pueden ejecutar el archivo instalar.bat en windows)
+ejecutar instalar.bat para instalar las dependencias
+o bajarse el zip con todos los archivos listos
 
 # Configuracion:
 abre el archivo config.json y pon tu p-b token en el valor "token"
@@ -25,7 +20,7 @@ ejemplo:
 (token falso)
 
 # Ejecutar
-abrir el archivo ejecutar.bat
+abrir el archivo ejecutar.bat o proxy.exe si lo bajaste desde el zip
 
 en ST selecciona la api de openAI y de proxi pon esta ip:
 http://127.0.0.1:5000
