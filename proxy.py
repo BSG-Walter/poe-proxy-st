@@ -62,6 +62,7 @@ def completions():
         if i == len(messages) - 1:
             for chunk in client.send_message(config['settings']['bot'], message):
                 pass
+            chunk["text"]=chunk["text"].split("U:")[0].replace("A:","")
             response = {
                 "choices": [
                     {
