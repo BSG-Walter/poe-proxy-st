@@ -108,8 +108,8 @@ def event_stream(messages):
                 chunk = chunk["text_new"]
                 temp_chunk = prev_chunk + chunk
 
-                if "A:" in temp_chunk or "U:" in temp_chunk: #evitamos enviar el A: que representa el inicio de mensajes de asistente.
-                    response["choices"][0]["delta"]["content"] = temp_chunk.replace("A:","").replace("U:", "")
+                if "A:" in temp_chunk or "U:" or "S:" in temp_chunk: #evitamos enviar el A: que representa el inicio de mensajes de asistente.
+                    response["choices"][0]["delta"]["content"] = temp_chunk.replace("A:","").replace("U:", "").replace("S:","")
                     yield '\n\ndata: ' + json.dumps(response)
                     chunk = ""
                 else:
