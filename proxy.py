@@ -6,18 +6,7 @@ import time
 import json
 import atexit
 
-config=[]
-config_path = "config.json"
 aborted = False
-
-with open(config_path, 'r') as config_file:
-    config = json.load(config_file)
-
-token = config['settings']['token']
-client = poe.Client(token)
-
-print("Lista de bots:")
-print(json.dumps(client.bot_names, indent=2))
 
 def jsonToText(message):
     result = []
@@ -60,7 +49,7 @@ def completions():
         message = messages[i]
 
         if i == len(messages) - 1:
-            for chunk in client.send_message(config['settings']['bot'], message):
+            for chunk in cliente.send_message(config['settings']['bot'], message):
                 pass
             chunk["text"]=chunk["text"].split("U:")[0].replace("A:","")
             response = {
@@ -75,8 +64,8 @@ def completions():
             }
         else: 
             #estos son los primeros mensajes, se borran apenas se generan respuesta
-            for chunk in client.send_message(config['settings']['bot'], message):
-                client.purge_conversation(config['settings']['bot'], count=1)
+            for chunk in cliente.send_message(config['settings']['bot'], message):
+                cliente.purge_conversation(config['settings']['bot'], count=1)
                 break
 
         #print(message)
@@ -109,10 +98,10 @@ def event_stream(messages):
         message = messages[i]
 
         if i == len(messages) - 1:
-            for chunk in client.send_message(config['settings']['bot'], message):
+            for chunk in cliente.send_message(config['settings']['bot'], message):
                 if aborted: #si le dan al boton stop, borramos el ultimo mensaje para cancelar la generacion (WIP)
                     print ("Mensaje cancelado")
-                    client.purge_conversation(config['settings']['bot'], count=1)
+                    cliente.purge_conversation(config['settings']['bot'], count=1)
                     handle_abort(False)
                     break
 
@@ -127,8 +116,8 @@ def event_stream(messages):
             yield '\n\ndata: [DONE]'
         else: 
             #estos son los primeros mensajes, se borran apenas se generan respuesta
-            for chunk in client.send_message(config['settings']['bot'], message):
-                client.purge_conversation(config['settings']['bot'], count=1)
+            for chunk in cliente.send_message(config['settings']['bot'], message):
+                cliente.purge_conversation(config['settings']['bot'], count=1)
                 break
 
 @app.route('/models', methods=['GET'])
@@ -154,5 +143,25 @@ def models():
 
 
 if __name__ == '__main__':
-  app.run(port=5000)
-  asyncio.run(main())
+    config=[]
+    config_path = "config.json"
+
+    with open(config_path, 'r') as config_file:
+        config = json.load(config_file)
+
+    if len(sys.argv) > 1:
+        # Actualizamos el valor de "token" en el archivo config.json
+        config['settings']['token'] = sys.argv[1]
+        
+        with open(config_path, 'w') as config_file:
+            json.dump(config, config_file)
+
+    token = config['settings']['token']
+    global cliente
+    cliente = poe.Client(token)
+
+    print("Lista de bots:")
+    print(json.dumps(cliente.bot_names, indent=2))
+
+    app.run(port=5000)
+    asyncio.run(main())
