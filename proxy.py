@@ -96,7 +96,7 @@ def event_stream(messages):
 
     for i in range(len(messages)):
         message = messages[i]
-
+        response = {"choices": [{"delta": {"content": ""}}]}
         if i == len(messages) - 1:
             for chunk in cliente.send_message(config['settings']['bot'], message):
                 if aborted: #si le dan al boton stop, borramos el ultimo mensaje para cancelar la generacion (WIP)
@@ -105,14 +105,26 @@ def event_stream(messages):
                     handle_abort(False)
                     break
 
-                chunk = chunk["text_new"] 
-                if (chunk == ":" and prev_chunk == "U") : #esta intentando crear mensajes por nosotros, por ahora lo dejo asi pero probablemnte sea buena idea cancelar el mensaje
-                    pass
-                if chunk != "A" and not (chunk == ":" and prev_chunk == "A") : #evitamos enviar el A: que representa el inicio de mensajes de asistente.
-                    response = {"choices": [{"delta": {"content": chunk}}] }
-                    yield '\n\ndata: ' + json.dumps(response)
-                prev_chunk = chunk
+                chunk = chunk["text_new"]
+                temp_chunk = prev_chunk + chunk
 
+                if "A:" in temp_chunk or "U:" in temp_chunk: #evitamos enviar el A: que representa el inicio de mensajes de asistente.
+                    response["choices"][0]["delta"]["content"] = temp_chunk.replace("A:","").replace("U:", "")
+                    yield '\n\ndata: ' + json.dumps(response)
+                    chunk = ""
+                else:
+                    response["choices"][0]["delta"]["content"] = prev_chunk
+                    yield '\n\ndata: ' + json.dumps(response)
+
+                if ("U:" in temp_chunk) : #esta intentando crear mensajes por nosotros, asi que cancelamos la generacion borrando el ultimo mensaje, y salimos del for
+                    cliente.purge_conversation(config['settings']['bot'], count=1)
+                    prev_chunk = ""
+                    break
+
+                prev_chunk = chunk
+            response["choices"][0]["delta"]["content"] = prev_chunk
+            yield '\n\ndata: ' + json.dumps(response)
+            time.sleep(0.2)
             yield '\n\ndata: [DONE]'
         else: 
             #estos son los primeros mensajes, se borran apenas se generan respuesta
@@ -150,8 +162,10 @@ if __name__ == '__main__':
         config = json.load(config_file)
 
     if len(sys.argv) > 1:
-        # Actualizamos el valor de "token" en el archivo config.json
         config['settings']['token'] = sys.argv[1]
+
+    if len(sys.argv) > 2:
+        config['settings']['bot'] = sys.argv[2]
         
         with open(config_path, 'w') as config_file:
             json.dump(config, config_file)
