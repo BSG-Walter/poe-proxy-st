@@ -108,7 +108,7 @@ def event_stream(messages):
                 chunk = chunk["text_new"]
                 temp_chunk = prev_chunk + chunk
 
-                if "A:" in temp_chunk or "U:" or "S:" in temp_chunk: #evitamos enviar el A: que representa el inicio de mensajes de asistente.
+                if ("A:" in temp_chunk) or ("U:" in temp_chunk) or ("S:" in temp_chunk): #evitamos enviar el A: que representa el inicio de mensajes de asistente.
                     response["choices"][0]["delta"]["content"] = temp_chunk.replace("A:","").replace("U:", "").replace("S:","")
                     yield '\n\ndata: ' + json.dumps(response)
                     chunk = ""
@@ -117,8 +117,8 @@ def event_stream(messages):
                     yield '\n\ndata: ' + json.dumps(response)
 
                 if ("U:" in temp_chunk) : #esta intentando crear mensajes por nosotros, asi que cancelamos la generacion borrando el ultimo mensaje, y salimos del for
-                    #cliente.purge_conversation(config['settings']['bot'], count=1)
-                    #prev_chunk = ""
+                    cliente.purge_conversation(config['settings']['bot'], count=1)
+                    prev_chunk = ""
                     break
 
                 prev_chunk = chunk
@@ -176,6 +176,8 @@ if __name__ == '__main__':
 
     print("Lista de bots:")
     print(json.dumps(cliente.bot_names, indent=2))
+
+    print("\n\nTodo listo, Ya puedes conectarte a ST!\n\n")
 
     app.run(port=5000)
     asyncio.run(main())
