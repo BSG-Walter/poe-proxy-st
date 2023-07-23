@@ -117,8 +117,8 @@ def event_stream(messages):
                     yield '\n\ndata: ' + json.dumps(response)
 
                 if ("U:" in temp_chunk) : #esta intentando crear mensajes por nosotros, asi que cancelamos la generacion borrando el ultimo mensaje, y salimos del for
-                    cliente.purge_conversation(config['settings']['bot'], count=1)
-                    prev_chunk = ""
+                    #cliente.purge_conversation(config['settings']['bot'], count=1)
+                    #prev_chunk = ""
                     break
 
                 prev_chunk = chunk
