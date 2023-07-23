@@ -5,7 +5,6 @@ Python
 
 # Instalacion:
 ejecutar instalar.bat para instalar las dependencias
-o bajarse el zip con todos los archivos listos (https://github.com/BSG-Walter/poe-proxy-st/releases/tag/0.1)
 
 # Configuracion:
 abre el archivo config.json y pon tu p-b token en el valor "token"
@@ -22,10 +21,12 @@ ejemplo:
 (token falso)
 
 # Ejecutar
-abrir el archivo ejecutar.bat o proxy.exe si lo bajaste desde el zip
+abrir el archivo ejecutar.bat
 
-en ST selecciona la api de openAI y de proxi pon esta ip:
+en ST selecciona la api de openAI y de proxy pon esta ip:
 http://127.0.0.1:5000
+
+en api key poner cualquier valor
 
 
 eso es todo.
