@@ -1,6 +1,7 @@
 {
   "settings": {
     "token": "",
+    "formkey": "",
     "bot": "chinchilla"
   },
   "replace":{

@@ -165,14 +165,16 @@ if __name__ == '__main__':
         config['settings']['token'] = sys.argv[1]
 
     if len(sys.argv) > 2:
-        config['settings']['bot'] = sys.argv[2]
+        config['settings']['formkey'] = sys.argv[2]
+
+    if len(sys.argv) > 3:
+        config['settings']['bot'] = sys.argv[3]
         
         with open(config_path, 'w') as config_file:
             json.dump(config, config_file)
 
-    token = config['settings']['token']
     global cliente
-    cliente = poe.Client(token)
+    cliente = poe.Client(config['settings']['token'], formkey=config['settings']['formkey'])
 
     print("Lista de bots:")
     print(json.dumps(cliente.bot_names, indent=2))
