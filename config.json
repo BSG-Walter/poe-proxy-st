@@ -1,7 +1,8 @@
 {
   "settings": {
     "token": "",
-    "bot": "chinchilla"
+    "formkey": "",
+    "bot": "ChatGPT"
   },
   "replace":{
     "assistant": "A",

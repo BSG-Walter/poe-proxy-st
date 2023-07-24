@@ -1,6 +1,7 @@
 from flask import Flask, Response, request, jsonify
 import time
-import poe
+from async_poe_client import Poe_Client
+import asyncio
 import sys
 import time
 import json
@@ -49,23 +50,22 @@ def completions():
         message = messages[i]
 
         if i == len(messages) - 1:
-            for chunk in cliente.send_message(config['settings']['bot'], message):
-                pass
-            chunk["text"]=chunk["text"].split("U:")[0].replace("A:","")
+            chunk = await cliente.ask(url_botname=config['settings']['bot'], question=message, suggest_able=False):
+            chunk = chunk.split("U:")[0].replace("A:","")
             response = {
                 "choices": [
                     {
                     "message": {
                         "role":"assistant",
-                        "content": chunk["text"]
+                        "content": chunk
                     }
                     }
                 ] 
             }
         else: 
             #estos son los primeros mensajes, se borran apenas se generan respuesta
-            for chunk in cliente.send_message(config['settings']['bot'], message):
-                cliente.purge_conversation(config['settings']['bot'], count=1)
+            async for chunk in cliente.ask_stream(url_botname=config['settings']['bot'], question=message, suggest_able=False):
+                await cliente.delete_bot_conversation(url_botname=config['settings']['bot'], count=1)
                 break
 
         #print(message)
@@ -98,14 +98,13 @@ def event_stream(messages):
         message = messages[i]
         response = {"choices": [{"delta": {"content": ""}}]}
         if i == len(messages) - 1:
-            for chunk in cliente.send_message(config['settings']['bot'], message):
+            async for chunk in cliente.ask_stream(url_botname=config['settings']['bot'], question=message, suggest_able=False):
                 if aborted: #si le dan al boton stop, borramos el ultimo mensaje para cancelar la generacion (WIP)
                     print ("Mensaje cancelado")
-                    cliente.purge_conversation(config['settings']['bot'], count=1)
+                    await cliente.delete_bot_conversation(url_botname=config['settings']['bot'], count=1)
                     handle_abort(False)
                     break
 
-                chunk = chunk["text_new"]
                 temp_chunk = prev_chunk + chunk
 
                 if ("A:" in temp_chunk) or ("U:" in temp_chunk) or ("S:" in temp_chunk): #evitamos enviar el A: que representa el inicio de mensajes de asistente.
@@ -117,7 +116,7 @@ def event_stream(messages):
                     yield '\n\ndata: ' + json.dumps(response)
 
                 if ("U:" in temp_chunk) : #esta intentando crear mensajes por nosotros, asi que cancelamos la generacion borrando el ultimo mensaje, y salimos del for
-                    cliente.purge_conversation(config['settings']['bot'], count=1)
+                    await cliente.delete_bot_conversation(url_botname=config['settings']['bot'], count=1)
                     prev_chunk = ""
                     break
 
@@ -128,7 +127,7 @@ def event_stream(messages):
             yield '\n\ndata: [DONE]'
         else: 
             #estos son los primeros mensajes, se borran apenas se generan respuesta
-            for chunk in cliente.send_message(config['settings']['bot'], message):
+            async for chunk in cliente.ask_stream(url_botname=config['settings']['bot'], question=message, suggest_able=False):
                 cliente.purge_conversation(config['settings']['bot'], count=1)
                 break
 
@@ -166,18 +165,26 @@ if __name__ == '__main__':
 
     if len(sys.argv) > 2:
         config['settings']['bot'] = sys.argv[2]
+
+    if len(sys.argv) > 3:
+        config['settings']['formkey'] = sys.argv[3]
         
         with open(config_path, 'w') as config_file:
             json.dump(config, config_file)
 
     token = config['settings']['token']
+    formkey = config['settings']['formkey']
+    bot = config['settings']['bot']
     global cliente
-    cliente = poe.Client(token)
+    cliente = Poe_Client(token, formkey).create()
 
-    print("Lista de bots:")
-    print(json.dumps(cliente.bot_names, indent=2))
+    bots = await poe_client.get_available_bots()
+    print("Esta es tu lista de bots:\n")
+    for bbot in bots:
+        print(bbot['handle'])
+    print("\nSi cambias al bot tienes que reiniciar esta celda para que el cambio surja efecto")
 
-    print("\n\nTodo listo, Ya puedes conectarte a ST!\n\n")
+    print("\nTodo listo, Ya puedes conectarte a ST!\n")
 
     app.run(port=5000)
     asyncio.run(main())
