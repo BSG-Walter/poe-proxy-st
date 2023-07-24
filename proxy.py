@@ -1,4 +1,6 @@
-from flask import Flask, Response, request, jsonify
+from fastapi import FastAPI, Response, Request, WebSocket, WebSocketDisconnect, BackgroundTasks, Depends, HTTPException
+from fastapi.responses import JSONResponse
+from sse_starlette.sse import EventSourceResponse
 import time
 from async_poe_client import Poe_Client
 import asyncio
@@ -6,8 +8,10 @@ import sys
 import time
 import json
 import atexit
+import uvicorn
 
-aborted = False
+app = FastAPI()
+
 
 def jsonToText(message):
     result = []
@@ -34,23 +38,75 @@ async def main():
   async with websockets.serve(websocket_handler, "localhost", 8765):
     await asyncio.Future()
 
-app = Flask(__name__)
-
-@app.route('/chat/completions', methods=['POST']) 
-def completions():
-    # Obtener el mensaje de la solicitud y partimos el prompt cada 4000 caracteres para que poe lo pueda procesar bien
-    messages = jsonToText(request.get_json())
+@app.post('//chat/completions')
+@app.post('/chat/completions')
+async def completions(request: Request):
     response = ""
-    stream = request.get_json()['stream']
+    # Obtener el mensaje de la solicitud y partimos el prompt cada 4000 caracteres para que poe lo pueda procesar bien
+    messages = jsonToText(await request.json())
+    stream = (await request.json())['stream']
 
     if stream:
-        return Response(event_stream(messages), content_type='text/event-stream')
+        #response = JSONResponse(content=event_stream(messages))
+        #response.headers["Content-Type"] = "text/event-stream"
+        #return event_stream(messages)
 
+        #STREAMING DE MENSAJES
+        async def event_stream():
+            response = {
+                "choices": [{
+                    "delta": {
+                        "role":"assistant",
+                    }
+                }]
+            }
+            yield '\n\ndata: ' + json.dumps(response)
+            time.sleep(0.1)
+            prev_chunk = ""
+
+            for i in range(len(messages)):
+                message = messages[i]
+                response = {"choices": [{"delta": {"content": ""}}]}
+                if i == len(messages) - 1:
+                    async for chunk in cliente.ask_stream(url_botname=config['settings']['bot'], question=message, suggest_able=False):
+                        if aborted: #si le dan al boton stop, borramos el ultimo mensaje para cancelar la generacion (WIP)
+                            print ("Mensaje cancelado")
+                            await cliente.delete_bot_conversation(url_botname=config['settings']['bot'], count=1)
+                            handle_abort(False)
+                            break
+
+                        temp_chunk = prev_chunk + chunk
+
+                        if ("A:" in temp_chunk) or ("U:" in temp_chunk) or ("S:" in temp_chunk): #evitamos enviar el A: que representa el inicio de mensajes de asistente.
+                            response["choices"][0]["delta"]["content"] = temp_chunk.replace("A:","").replace("U:", "").replace("S:","")
+                            yield '\n\ndata: ' + json.dumps(response)
+                            chunk = ""
+                        else:
+                            response["choices"][0]["delta"]["content"] = prev_chunk
+                            yield '\n\ndata: ' + json.dumps(response)
+
+                        if ("U:" in temp_chunk) : #esta intentando crear mensajes por nosotros, asi que cancelamos la generacion borrando el ultimo mensaje, y salimos del for
+                            await cliente.delete_bot_conversation(url_botname=config['settings']['bot'], count=1)
+                            prev_chunk = ""
+                            break
+
+                        prev_chunk = chunk
+                    response["choices"][0]["delta"]["content"] = prev_chunk
+                    yield '\n\ndata: ' + json.dumps(response)
+                    time.sleep(0.2)
+                    yield '\n\ndata: [DONE]'
+                else: 
+                    #estos son los primeros mensajes, se borran apenas se generan respuesta
+                    async for chunk in cliente.ask_stream(url_botname=config['settings']['bot'], question=message, suggest_able=False):
+                        await cliente.delete_bot_conversation(url_botname=config['settings']['bot'], count=1)
+                        break
+        return EventSourceResponse(event_stream())
+    # NO STREAMING
     for i in range(len(messages)):
         message = messages[i]
 
         if i == len(messages) - 1:
-            chunk = await cliente.ask(url_botname=config['settings']['bot'], question=message, suggest_able=False):
+            chunk = await cliente.ask(url_botname=config['settings']['bot'], question=message, suggest_able=False)
             chunk = chunk.split("U:")[0].replace("A:","")
             response = {
                 "choices": [
@@ -70,70 +126,23 @@ def completions():
 
         #print(message)
 
-    return jsonify(response)
+    return JSONResponse(content=response)
 
 def handle_abort(status = True):
     global aborted
     aborted = status
 
-@app.teardown_request
-def teardown_request(exception):
-    if exception:
-        handle_abort()
-
-def event_stream(messages):
-
-    response = {
-        "choices": [{
-            "delta": {
-                "role":"assistant",
-            }
-        }]
-    }
-    yield '\n\ndata: ' + json.dumps(response)
-    time.sleep(0.1)
-    prev_chunk = ""
-
-    for i in range(len(messages)):
-        message = messages[i]
-        response = {"choices": [{"delta": {"content": ""}}]}
-        if i == len(messages) - 1:
-            async for chunk in cliente.ask_stream(url_botname=config['settings']['bot'], question=message, suggest_able=False):
-                if aborted: #si le dan al boton stop, borramos el ultimo mensaje para cancelar la generacion (WIP)
-                    print ("Mensaje cancelado")
-                    await cliente.delete_bot_conversation(url_botname=config['settings']['bot'], count=1)
-                    handle_abort(False)
-                    break
-
-                temp_chunk = prev_chunk + chunk
-
-                if ("A:" in temp_chunk) or ("U:" in temp_chunk) or ("S:" in temp_chunk): #evitamos enviar el A: que representa el inicio de mensajes de asistente.
-                    response["choices"][0]["delta"]["content"] = temp_chunk.replace("A:","").replace("U:", "").replace("S:","")
-                    yield '\n\ndata: ' + json.dumps(response)
-                    chunk = ""
-                else:
-                    response["choices"][0]["delta"]["content"] = prev_chunk
-                    yield '\n\ndata: ' + json.dumps(response)
-
-                if ("U:" in temp_chunk) : #esta intentando crear mensajes por nosotros, asi que cancelamos la generacion borrando el ultimo mensaje, y salimos del for
-                    await cliente.delete_bot_conversation(url_botname=config['settings']['bot'], count=1)
-                    prev_chunk = ""
-                    break
-
-                prev_chunk = chunk
-            response["choices"][0]["delta"]["content"] = prev_chunk
-            yield '\n\ndata: ' + json.dumps(response)
-            time.sleep(0.2)
-            yield '\n\ndata: [DONE]'
-        else: 
-            #estos son los primeros mensajes, se borran apenas se generan respuesta
-            async for chunk in cliente.ask_stream(url_botname=config['settings']['bot'], question=message, suggest_able=False):
-                cliente.purge_conversation(config['settings']['bot'], count=1)
-                break
+async def process_chunks(message):
+    async for chunk in cliente.ask_stream(url_botname=config['settings']['bot'], question=message, suggest_able=False):
+        if aborted:
+            print("Mensaje cancelado")
+            await cliente.delete_bot_conversation(url_botname=config['settings']['bot'], count=1)
+            handle_abort(False)
+            break
 
 @app.route('/models', methods=['GET'])
-def models():
-
+@app.route('//models', methods=['GET'])
+def models(request: Request):
     response = {
         "object": "list",
         "data": [
@@ -149,11 +158,23 @@ def models():
         ]
     }
     
-    return jsonify(response)
+    return JSONResponse(content=response)
 
 
+async def init_poe():
+    global cliente
+    cliente = await Poe_Client(token, formkey).create()
 
-if __name__ == '__main__':
+    bots = await cliente.get_available_bots()
+    print("Esta es tu lista de bots:\n")
+    for bbot in bots:
+        print(bbot['handle'])
+    print("\nSi cambias al bot tienes que reiniciar esta celda para que el cambio surja efecto")
+
+    print("\nTodo listo, Ya puedes conectarte a ST!\n")
+
+async def main():
+    global token, formkey, bot, config
     config=[]
     config_path = "config.json"
 
@@ -175,16 +196,14 @@ if __name__ == '__main__':
     token = config['settings']['token']
     formkey = config['settings']['formkey']
     bot = config['settings']['bot']
-    global cliente
-    cliente = Poe_Client(token, formkey).create()
 
-    bots = await poe_client.get_available_bots()
-    print("Esta es tu lista de bots:\n")
-    for bbot in bots:
-        print(bbot['handle'])
-    print("\nSi cambias al bot tienes que reiniciar esta celda para que el cambio surja efecto")
+    await init_poe()
 
-    print("\nTodo listo, Ya puedes conectarte a ST!\n")
+@app.on_event("shutdown")
+def shutdown_event():
+    # Implementa lo que necesites hacer al detener el servidor FastAPI
+    pass
 
-    app.run(port=5000)
+if __name__ == '__main__':
     asyncio.run(main())
+    uvicorn.run(app, host="0.0.0.0", port=5000)
