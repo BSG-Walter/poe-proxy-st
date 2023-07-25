@@ -1,7 +1,10 @@
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1VRbPPZikK0CBwZr91oH7160M_IxjIAs4?usp=sharing)
 si no quieren instalarlo localmente o son usuarios de movil, pueden ejecutarlo el proxy facilmente usando este google colab.
 # Requisitos: 
+
 Python
+
+https://visualstudio.microsoft.com/es/visual-cpp-build-tools/
 
 # Instalacion:
 ejecutar instalar.bat para instalar las dependencias
