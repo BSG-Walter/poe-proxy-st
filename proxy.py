@@ -9,7 +9,7 @@ import atexit
 aborted = False
 
 def dividirStr(str, size):
-    return [cadena[i:i + size] for i in range(0, len(cadena), size)]
+    return [str[i:i + size] for i in range(0, len(str), size)]
 
 def jsonToText(message):
     result = []
