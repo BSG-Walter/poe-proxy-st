@@ -55,7 +55,7 @@ def completions():
 
     for i in range(len(messages)):
         message = messages[i]
-        time.sleep(1)
+        time.sleep(0.5)
         if i == len(messages) - 1:
             for chunk in cliente.send_message(config['settings']['bot'], message):
                 pass
@@ -107,7 +107,7 @@ def event_stream(messages):
     for i in range(len(messages)):
         message = messages[i]
         response = {"choices": [{"delta": {"content": ""}}]}
-        time.sleep(1)
+        time.sleep(0.5)
         if i == len(messages) - 1:
             for chunk in cliente.send_message(config['settings']['bot'], message):
                 if aborted: #si le dan al boton stop, borramos el ultimo mensaje para cancelar la generacion (WIP)
