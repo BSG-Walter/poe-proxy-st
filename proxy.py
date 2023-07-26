@@ -26,7 +26,7 @@ def jsonToText(message):
         else:
             if (len(msg) > max_length): #si en un solo mensaje hay mas de 5000 caracteres, partimos el mensaje en si.
                 dividido = dividirStr(msg, max_length)
-                result.extend(partes[:-1])
+                result.extend(dividido[:-1])
                 current_chunk = dividido[-1]
             else:
                 result.append(current_chunk)
