@@ -55,7 +55,7 @@ def completions():
 
     for i in range(len(messages)):
         message = messages[i]
-
+        time.sleep(1)
         if i == len(messages) - 1:
             for chunk in cliente.send_message(config['settings']['bot'], message):
                 pass
@@ -73,7 +73,9 @@ def completions():
         else: 
             #estos son los primeros mensajes, se borran apenas se generan respuesta
             for chunk in cliente.send_message(config['settings']['bot'], message):
+                time.sleep(0.25)
                 cliente.purge_conversation(config['settings']['bot'], count=1)
+                time.sleep(0.25)
                 break
 
         #print(message)
@@ -105,11 +107,14 @@ def event_stream(messages):
     for i in range(len(messages)):
         message = messages[i]
         response = {"choices": [{"delta": {"content": ""}}]}
+        time.sleep(1)
         if i == len(messages) - 1:
             for chunk in cliente.send_message(config['settings']['bot'], message):
                 if aborted: #si le dan al boton stop, borramos el ultimo mensaje para cancelar la generacion (WIP)
                     print ("Mensaje cancelado")
+                    time.sleep(0.25)
                     cliente.purge_conversation(config['settings']['bot'], count=1)
+                    time.sleep(0.25)
                     handle_abort(False)
                     break
 
@@ -125,7 +130,9 @@ def event_stream(messages):
                     yield '\n\ndata: ' + json.dumps(response)
 
                 if ("U:" in temp_chunk) : #esta intentando crear mensajes por nosotros, asi que cancelamos la generacion borrando el ultimo mensaje, y salimos del for
+                    time.sleep(0.25)
                     cliente.purge_conversation(config['settings']['bot'], count=1)
+                    time.sleep(0.25)
                     prev_chunk = ""
                     break
 
@@ -137,7 +144,9 @@ def event_stream(messages):
         else: 
             #estos son los primeros mensajes, se borran apenas se generan respuesta
             for chunk in cliente.send_message(config['settings']['bot'], message):
+                time.sleep(0.25)
                 cliente.purge_conversation(config['settings']['bot'], count=1)
+                time.sleep(0.25)
                 break
 
 @app.route('/models', methods=['GET'])
