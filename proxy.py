@@ -8,10 +8,13 @@ import atexit
 
 aborted = False
 
+def dividirStr(str, size):
+    return [cadena[i:i + size] for i in range(0, len(cadena), size)]
+
 def jsonToText(message):
     result = []
     current_chunk = ""
-    max_length = 4000
+    max_length = 5000
     
     for message in message['messages']:
         if message['role'] == "assistant" : message['role'] = config['replace']['assistant']
@@ -21,8 +24,13 @@ def jsonToText(message):
         if len(current_chunk) + len(msg) <= max_length:
             current_chunk += msg
         else:
-            result.append(current_chunk)
-            current_chunk = msg
+            if (len(msg) > max_length): #si en un solo mensaje hay mas de 5000 caracteres, partimos el mensaje en si.
+                dividido = dividirStr(msg, max_length)
+                result.extend(partes[:-1])
+                current_chunk = dividido[-1]
+            else:
+                result.append(current_chunk)
+                current_chunk = msg
     
     if current_chunk:  # Si quedó algún trozo sin agregar
         result.append(current_chunk)
