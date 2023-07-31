@@ -7,6 +7,31 @@ import json
 import atexit
 
 aborted = False
+connected = False
+
+modelos = {
+    "object": "list",
+    "data": []
+}
+
+def add_model(new_id, new_root):
+    modelos["data"].append({
+        "id": new_id,
+        "object": "model",
+        "created": time.time(),
+        "owned_by": "openai",
+        "permission": [],
+        "root": new_root,
+        "parent": None
+    })
+
+#a sillytavern se envia la id para que aparezca en la lista de modelos, asi que decidi que en id va el nombre real y en root el identificador.
+#esta mal pero asi se ve mejor en el front
+def find_by_id(target_id):
+    for model in modelos["data"]:
+        if model.get("id") == target_id:
+            return model
+    return None
 
 def dividirStr(str, size):
     return [str[i:i + size] for i in range(0, len(str), size)]
@@ -50,14 +75,21 @@ def completions():
     response = ""
     stream = request.get_json()['stream']
 
+    model = find_by_id(request.get_json()['model'])
+    if not model:
+        print("No se encuentra el modelo especificado")
+        return
+    bot = model["root"]
+
+
     if stream:
-        return Response(event_stream(messages), content_type='text/event-stream')
+        return Response(event_stream(messages, bot), content_type='text/event-stream')
 
     for i in range(len(messages)):
         message = messages[i]
         time.sleep(0.5)
         if i == len(messages) - 1:
-            for chunk in cliente.send_message(config['settings']['bot'], message):
+            for chunk in cliente.send_message(bot, message):
                 pass
             chunk["text"]=chunk["text"].split("U:")[0].replace("A:","")
             response = {
@@ -72,9 +104,9 @@ def completions():
             }
         else: 
             #estos son los primeros mensajes, se borran apenas se generan respuesta
-            for chunk in cliente.send_message(config['settings']['bot'], message):
+            for chunk in cliente.send_message(bot, message):
                 time.sleep(0.25)
-                cliente.purge_conversation(config['settings']['bot'], count=1)
+                cliente.purge_conversation(bot, count=1)
                 time.sleep(0.25)
                 break
 
@@ -91,7 +123,7 @@ def teardown_request(exception):
     if exception:
         handle_abort()
 
-def event_stream(messages):
+def event_stream(messages, bot):
 
     response = {
         "choices": [{
@@ -109,11 +141,11 @@ def event_stream(messages):
         response = {"choices": [{"delta": {"content": ""}}]}
         time.sleep(0.5)
         if i == len(messages) - 1:
-            for chunk in cliente.send_message(config['settings']['bot'], message):
+            for chunk in cliente.send_message(bot, message):
                 if aborted: #si le dan al boton stop, borramos el ultimo mensaje para cancelar la generacion (WIP)
                     print ("Mensaje cancelado")
                     time.sleep(0.25)
-                    cliente.purge_conversation(config['settings']['bot'], count=1)
+                    cliente.purge_conversation(bot, count=1)
                     time.sleep(0.25)
                     handle_abort(False)
                     break
@@ -131,7 +163,7 @@ def event_stream(messages):
 
                 if ("U:" in temp_chunk) : #esta intentando crear mensajes por nosotros, asi que cancelamos la generacion borrando el ultimo mensaje, y salimos del for
                     time.sleep(0.25)
-                    cliente.purge_conversation(config['settings']['bot'], count=1)
+                    cliente.purge_conversation(bot, count=1)
                     time.sleep(0.25)
                     prev_chunk = ""
                     break
@@ -143,31 +175,20 @@ def event_stream(messages):
             yield '\n\ndata: [DONE]'
         else: 
             #estos son los primeros mensajes, se borran apenas se generan respuesta
-            for chunk in cliente.send_message(config['settings']['bot'], message):
+            for chunk in cliente.send_message(bot, message):
                 time.sleep(0.25)
-                cliente.purge_conversation(config['settings']['bot'], count=1)
+                cliente.purge_conversation(bot, count=1)
                 time.sleep(0.25)
                 break
 
 @app.route('/models', methods=['GET'])
 def models():
-
-    response = {
-        "object": "list",
-        "data": [
-            {
-                "id": "gpt-3.5",
-                "object": "model",
-                "created": time.time(), 
-                "owned_by": "openai",
-                "permission": [],
-                "root": "gpt-3.5",
-                "parent": None
-            }
-        ]
-    }
-    
-    return jsonify(response)
+    global cliente, connected
+    if connected:
+        connected = False
+        cliente = poe.Client(config['settings']['token'], formkey=config['settings']['formkey'])
+        connected = True
+    return jsonify(modelos)
 
 
 
@@ -192,9 +213,14 @@ if __name__ == '__main__':
 
     global cliente
     cliente = poe.Client(config['settings']['token'], formkey=config['settings']['formkey'])
+    connected = True
 
     print("Lista de bots:")
-    print(json.dumps(cliente.bot_names, indent=2))
+    #print(json.dumps(cliente.bot_names, indent=2))
+    for modelid, modelname in cliente.bot_names.items():
+        print(modelid + " - " + modelname)
+        add_model(modelname, modelid)
+
 
     print("\n\nTodo listo, Ya puedes conectarte a ST!\n\n")
 
