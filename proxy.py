@@ -90,9 +90,7 @@ def completions():
         message = messages[i]
 
         if i == len(messages) - 1:
-            while(cliente.is_busy()):
-                print(93)
-                time.sleep(0.25)#esperamos hasta que el cliente se desocupe (que no se esten generando mensajes) hasta poder enviar otro mensaje
+            time.sleep(0.25)#esperamos hasta que el cliente se desocupe (que no se esten generando mensajes) hasta poder enviar otro mensaje
             for chunk in cliente.send_message(bot, message):
                 pass
             chunk["text"]=chunk["text"].split("U:")[0].replace("A:","")
@@ -187,10 +185,7 @@ def event_stream(messages, bot):
             yield '\n\ndata: [DONE]'
         else: 
             #estos son los primeros mensajes, se borran apenas se generan respuesta
-            while(cliente.is_busy()):
-                print(182)
-                time.sleep(0.25)#esperamos hasta que el cliente se desocupe (que no se esten generando mensajes) hasta poder enviar otro mensaje
-            cant = 0
+            time.sleep(0.25)
             for chunk in cliente.send_message(bot, message):
                 time.sleep(0.25)
                 #cliente.purge_conversation(bot, count=1)
