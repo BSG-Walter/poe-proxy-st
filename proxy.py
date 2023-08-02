@@ -87,8 +87,11 @@ def completions():
 
     for i in range(len(messages)):
         message = messages[i]
-        time.sleep(0.5)
+
         if i == len(messages) - 1:
+            while(cliente.is_busy()):
+                print(93)
+                time.sleep(0.25)#esperamos hasta que el cliente se desocupe (que no se esten generando mensajes) hasta poder enviar otro mensaje
             for chunk in cliente.send_message(bot, message):
                 pass
             chunk["text"]=chunk["text"].split("U:")[0].replace("A:","")
@@ -104,10 +107,13 @@ def completions():
             }
         else: 
             #estos son los primeros mensajes, se borran apenas se generan respuesta
+            while(cliente.is_busy()):
+                print(111)
+                time.sleep(0.25)#esperamos hasta que el cliente se desocupe (que no se esten generando mensajes) hasta poder enviar otro mensaje
             for chunk in cliente.send_message(bot, message):
                 time.sleep(0.25)
                 cliente.purge_conversation(bot, count=1)
-                time.sleep(0.25)
+                reconectar()
                 break
 
         #print(message)
@@ -139,17 +145,18 @@ def event_stream(messages, bot):
     for i in range(len(messages)):
         message = messages[i]
         response = {"choices": [{"delta": {"content": ""}}]}
-        time.sleep(0.5)
         if i == len(messages) - 1:
+            while(cliente.is_busy()):
+                print(149)
+                time.sleep(0.25)#esperamos hasta que el cliente se desocupe (que no se esten generando mensajes) hasta poder enviar otro mensaje
             for chunk in cliente.send_message(bot, message):
                 if aborted: #si le dan al boton stop, borramos el ultimo mensaje para cancelar la generacion (WIP)
                     print ("Mensaje cancelado")
                     time.sleep(0.25)
                     cliente.purge_conversation(bot, count=1)
-                    time.sleep(0.25)
+                    reconectar()
                     handle_abort(False)
                     break
-
                 chunk = chunk["text_new"]
                 temp_chunk = prev_chunk + chunk
 
@@ -162,9 +169,8 @@ def event_stream(messages, bot):
                     yield '\n\ndata: ' + json.dumps(response)
 
                 if ("U:" in temp_chunk) : #esta intentando crear mensajes por nosotros, asi que cancelamos la generacion borrando el ultimo mensaje, y salimos del for
-                    time.sleep(0.25)
                     cliente.purge_conversation(bot, count=1)
-                    time.sleep(0.25)
+                    reconectar()
                     prev_chunk = ""
                     break
 
@@ -175,22 +181,28 @@ def event_stream(messages, bot):
             yield '\n\ndata: [DONE]'
         else: 
             #estos son los primeros mensajes, se borran apenas se generan respuesta
+            while(cliente.is_busy()):
+                print(182)
+                time.sleep(0.25)#esperamos hasta que el cliente se desocupe (que no se esten generando mensajes) hasta poder enviar otro mensaje
+            cant = 0
             for chunk in cliente.send_message(bot, message):
                 time.sleep(0.25)
                 cliente.purge_conversation(bot, count=1)
-                time.sleep(0.25)
+                reconectar()
                 break
 
 @app.route('/models', methods=['GET'])
 def models():
+    reconectar()
+    return jsonify(modelos)
+
+def reconectar():
     global cliente, connected
     if connected:
         connected = False
         cliente = poe.Client(config['settings']['token'], formkey=config['settings']['formkey'])
         connected = True
-    return jsonify(modelos)
-
-
+    return
 
 if __name__ == '__main__':
     config=[]
