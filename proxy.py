@@ -1,7 +1,8 @@
 from flask import Flask, Response, request, jsonify
 import time
-import poe
 import sys
+import poe
+
 import time
 import json
 import atexit
@@ -112,7 +113,8 @@ def completions():
                 time.sleep(0.25)#esperamos hasta que el cliente se desocupe (que no se esten generando mensajes) hasta poder enviar otro mensaje
             for chunk in cliente.send_message(bot, message):
                 time.sleep(0.25)
-                cliente.purge_conversation(bot, count=1)
+                for msg in cliente.active_messages.values():
+                    cliente.stop_generation(bot, msg)
                 reconectar()
                 break
 
@@ -153,7 +155,9 @@ def event_stream(messages, bot):
                 if aborted: #si le dan al boton stop, borramos el ultimo mensaje para cancelar la generacion (WIP)
                     print ("Mensaje cancelado")
                     time.sleep(0.25)
-                    cliente.purge_conversation(bot, count=1)
+                    #cliente.purge_conversation(bot, count=1)
+                    for msg in cliente.active_messages.values():
+                        cliente.stop_generation(bot, msg)
                     reconectar()
                     handle_abort(False)
                     break
@@ -169,7 +173,9 @@ def event_stream(messages, bot):
                     yield '\n\ndata: ' + json.dumps(response)
 
                 if ("U:" in temp_chunk) : #esta intentando crear mensajes por nosotros, asi que cancelamos la generacion borrando el ultimo mensaje, y salimos del for
-                    cliente.purge_conversation(bot, count=1)
+                    #cliente.purge_conversation(bot, count=1)
+                    for msg in cliente.active_messages.values():
+                        cliente.stop_generation(bot, msg)
                     reconectar()
                     prev_chunk = ""
                     break
@@ -187,7 +193,9 @@ def event_stream(messages, bot):
             cant = 0
             for chunk in cliente.send_message(bot, message):
                 time.sleep(0.25)
-                cliente.purge_conversation(bot, count=1)
+                #cliente.purge_conversation(bot, count=1)
+                for msg in cliente.active_messages.values():
+                    cliente.stop_generation(bot, msg)
                 reconectar()
                 break
 
