@@ -112,7 +112,7 @@ def completions():
             for chunk in cliente.send_message(bot, message):
                 time.sleep(0.25)
                 for msg in cliente.active_messages.values():
-                    cliente.stop_generation(bot, msg)
+                    cliente.stop_generation(msg)
                 reconectar()
                 break
 
@@ -155,7 +155,7 @@ def event_stream(messages, bot):
                     time.sleep(0.25)
                     #cliente.purge_conversation(bot, count=1)
                     for msg in cliente.active_messages.values():
-                        cliente.stop_generation(bot, msg)
+                        cliente.stop_generation(msg)
                     reconectar()
                     handle_abort(False)
                     break
@@ -173,7 +173,7 @@ def event_stream(messages, bot):
                 if ("U:" in temp_chunk) : #esta intentando crear mensajes por nosotros, asi que cancelamos la generacion borrando el ultimo mensaje, y salimos del for
                     #cliente.purge_conversation(bot, count=1)
                     for msg in cliente.active_messages.values():
-                        cliente.stop_generation(bot, msg)
+                        cliente.stop_generation(msg)
                     reconectar()
                     prev_chunk = ""
                     break
@@ -190,7 +190,7 @@ def event_stream(messages, bot):
                 time.sleep(0.25)
                 #cliente.purge_conversation(bot, count=1)
                 for msg in cliente.active_messages.values():
-                    cliente.stop_generation(bot, msg)
+                    cliente.stop_generation(msg)
                 reconectar()
                 break
 
